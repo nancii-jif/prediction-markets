@@ -1,0 +1,46 @@
+DESCRIPTION: >-
+  Fixed config for the test suite. Values are pinned: tests assert against
+  them, so changing anything here will fail tests by design.
+
+KALSHI_BASE_URL: https://api.elections.kalshi.com/trade-api/v2
+
+STREAM_INTERVAL_S: 3600
+ROUND_INTERVAL_S: 7200
+ARCHIVE_SWEEP_INTERVAL_S: null
+ROUNDS: null
+
+SECTORS: [Politics, Economics, Financials]
+MARKETS_PER_SECTOR: 5
+EXPIRY_MIN_H: 24
+EXPIRY_MAX_H: 168
+RETIRE_GRACE_H: 24
+VOLUME_FLOOR: 100.0
+UNCERTAIN_LO: 20
+UNCERTAIN_HI: 80
+
+INITIAL_CASH_CENTS: 100000
+MAX_POSITION: 200
+MAX_LOT: 50
+FEE_CENTS: 0
+PRICE_MIN: 1
+PRICE_MAX: 99
+
+QUOTE_SIDE: "yes"
+TEMPERATURE: null
+FAMILIES:
+  - [haiku,  anthropic/claude-haiku-4-5-20251001]
+  - [sonnet, anthropic/claude-sonnet-5]
+  - [opus,   anthropic/claude-opus-5]
+AGENTS_PER_FAMILY: 3
+MAX_CONCURRENCY: 16
+MAX_DAILY_CALLS: 3000
+LLM_TIMEOUT_S: 120
+LLM_MAX_RETRIES: 1
+LLM_API_RETRIES: 5
+PROMPT_VERSION: v0.1
+
+RUN_SEED: 0
+
+# --- tracking ---
+# null disables W&B entirely; a project name streams live metrics to it.
+WANDB_PROJECT: null

@@ -1,0 +1,85 @@
+# Agents in Prediction Markets — v0
+
+LLM agents paper-trade live Kalshi markets: real prices in, simulated fills,
+orders never reach Kalshi. Agents can only reach our database and broker —
+no Kalshi access, no credentials in their surface. Every decision is made
+against a recorded snapshot. All agents see identical data. Hold is always legal.
+
+## Architecture
+
+  Kalshi REST ──► listener ──► SQLite database ──► agent tools ──► agent
+  (public, no auth) (own process)       ▲                │
+                                   paper broker ◄── orders
+
+## Config
+
+  interval            = 24h     # turn == trading == forecast cadence
+  poll_interval       = 120s    # listener cadence
+  starting_cash       = $1000
+  max_order_size      = 50     # contracts per order
+  horizon             = 1-7d    # the only universe filter
+
+## Components
+
+### kalshi_client — sole Kalshi touchpoint
+Public REST (api.elections.kalshi.com/trade-api/v2), cursor pagination, retry.
+GET /markets?status=open&min_close_ts=..&max_close_ts=..&mve_filter=exclude
+(mve_filter=exclude is required: auto-generated parlay combos outnumber real
+markets ~6:1 and break pagination).
+
+### universe — daily sweep
+Filter: open markets with close_time 1-7 days out, checked at ADD time only.
+  universe(ticker, added_at, retired_at)
+Retire only on settlement. Held markets stay visible/closeable until settled.
+Note: close_time is an upper bound on TTR (markets can settle early).
+
+### listener — poll loop, only writer of market data
+Every poll_interval: batched GET /markets?tickers=.. (~100/req), append one
+snapshot row per ticker when a field changed. Never dies; append-only keyed
+(ticker, captured_at) so restarts are idempotent.
+
+### database — SQLite; the only thing agents read
+  snapshots(ticker, captured_at, yes_bid, yes_ask, bid_size, ask_size,
+            last, volume_24h, status, result)
+  universe, orders, fills, positions, forecasts, turns
+Fills carry an FK to the snapshot they were priced against.
+
+### broker — simulated execution
+- On order: refresh that ticker through the listener path (recorded as a
+  snapshot row), price the fill against it.
+- IOC only: buy at ask / sell at bid (never mid); fill min(order, displayed
+  touch size); cancel remainder.
+- Fees: Kalshi's real per-contract formula (pull current schedule).
+- Positions: signed YES contracts (buy NO at p == buy YES at 1-p). Integers.
+- Cooldown: reject order if market's last position change < interval ago.
+- Settlement sweep each turn: held tickers with status=settled -> realize
+  PnL at result, stop polling.
+- Mark-to-market at mid.
+
+### runner — turn loop
+Each interval, per agent: push turn brief -> agent acts via tools -> settlement
+sweep -> log turn. Brief (logged verbatim): timestamp, cash, positions with
+current marks + unrealized PnL, settlements since last turn, universe count.
+Forecasts: each turn the agent must submit p_yes per market it traded or
+looked at; missing -> carry previous forward + flag. Brier-scored at resolution.
+
+### baselines — same broker, same data
+buy-and-hold, random, hold-cash.
+
+## Agent tools (read database/broker only; every call + result logged to turns)
+
+  get_markets(ticker?)              -> latest snapshot rows (price, vol, spread)
+  create_order(ticker, side, size)  -> IOC fill result (or rejection + reason)
+  get_past_trades()                 -> own fills
+  get_pnl()                         -> realized (settled) vs unrealized (running)
+  submit_forecast(ticker, p_yes)    -> forecast row
+  web_search(query)                 -> flag-gated; query and results logged
+
+## Metrics
+
+PnL (realized + mark-to-market) vs baselines; Brier score from forecasts.
+
+## Build order
+
+kalshi_client -> database -> listener (start first: data can't be backfilled)
+-> universe -> broker -> tools -> runner -> baselines.

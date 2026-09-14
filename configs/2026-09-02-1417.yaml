@@ -1,0 +1,62 @@
+DESCRIPTION: >-
+  Trial run: fresh markets, 3x3 agents, 60s stream / 120s rounds, 3 rounds
+  (~6 min). 9 agents x 15 markets x 3 rounds = 405 LLM calls.
+
+KALSHI_BASE_URL: https://api.elections.kalshi.com/trade-api/v2
+
+# --- cadences ---
+# ROUNDS null runs open-ended; an integer bounds the run, and the budget check
+# then costs it exactly rather than extrapolating to 24h.
+STREAM_INTERVAL_S: 60
+ROUND_INTERVAL_S: 120
+ARCHIVE_SWEEP_INTERVAL_S: null
+ROUNDS: 3
+
+# --- live market selection ---
+SECTORS: [Politics, Economics, Financials]
+MARKETS_PER_SECTOR: 5
+EXPIRY_MIN_H: 24          # admit only markets closing at least this far out
+EXPIRY_MAX_H: 168         # ...and at most this far out (7 days)
+RETIRE_GRACE_H: 24        # clock backstop: retire this long after close_ts
+VOLUME_FLOOR: 100.0       # Kalshi 24h contract volume, checked at ADD time only
+UNCERTAIN_LO: 20          # Kalshi mid must sit inside [lo, hi] cents at ADD time
+UNCERTAIN_HI: 80
+
+# --- internal exchange ---
+INITIAL_CASH_CENTS: 100000
+MAX_POSITION: 200         # per agent per market, absolute signed YES contracts
+MAX_LOT: 50               # per side per market per round
+FEE_CENTS: 0              # v0: no internal fees
+PRICE_MIN: 1              # the 1-99 cent grid; contracts pay 100c
+PRICE_MAX: 99
+
+# --- agents ---
+# QUOTE_SIDE "no" presents the NO contract instead; the parser maps back at the
+# boundary so everything downstream stays in YES space. Comparing a yes-run
+# against a no-run on matched markets is the framing-bias check.
+QUOTE_SIDE: "yes"
+# null omits temperature from the request entirely. The Claude 5 models reject
+# it (400, "`temperature` is deprecated for this model") while Haiku 4.5 still
+# accepts it, so setting it would silently drop sonnet and opus from the run.
+TEMPERATURE: 1.0
+FAMILIES:
+  - [haiku,  anthropic/claude-haiku-4-5-20251001]
+  - [sonnet, anthropic/claude-sonnet-5]
+  - [opus,   anthropic/claude-opus-5]
+AGENTS_PER_FAMILY: 3
+# The Anthropic limit that bites first is concurrent requests across ALL
+# models, not per-minute rate (we used 13% of the 1000 req/min ceiling). The
+# concurrency cap is not reported in any response header. 32 produced 40 429s
+# and lost 110 of 135 calls in one round; LLM_API_RETRIES absorbs the rest.
+MAX_CONCURRENCY: 16
+MAX_DAILY_CALLS: 3000
+LLM_TIMEOUT_S: 120
+LLM_MAX_RETRIES: 1        # one reprompt when the model returns unparseable output
+LLM_API_RETRIES: 5        # transport retries with backoff (429, 5xx, timeouts)
+PROMPT_VERSION: v0.1
+
+RUN_SEED: 0
+
+# --- tracking ---
+# null disables W&B entirely; a project name streams live metrics to it.
+WANDB_PROJECT: null
