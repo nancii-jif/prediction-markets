@@ -1,1 +1,1 @@
-"""Agents in prediction markets — v0 paper-trading harness."""
+"""Continuous prediction-market MVP with independent participant tool loops."""

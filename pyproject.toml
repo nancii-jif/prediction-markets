@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prediction-markets"
+version = "0.1.0"
+description = "Agent prediction-market experiments, continuation, and analysis"
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
+[project.optional-dependencies]
+analysis = ["matplotlib>=3.7,<4"]
+deploy = ["modal==1.5.5"]
+dev = ["pytest"]
+
+[project.scripts]
+prediction-markets = "prediction_markets.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["prediction_markets*"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}

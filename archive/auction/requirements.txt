@@ -1,0 +1,9 @@
+# litellm 1.56+ needs Python 3.11 (typing.NotRequired); this project runs on
+# 3.10, so the version is pinned. Model ids carry an explicit provider prefix
+# in config.FAMILIES, which is what lets a release this old reach current
+# models.
+litellm==1.55.9
+pytest
+# Live run metrics. Optional: tracking is a no-op when WANDB_PROJECT is null,
+# and degrades to a warning if the package is missing.
+wandb

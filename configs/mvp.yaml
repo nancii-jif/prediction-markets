@@ -1,0 +1,76 @@
+# Frozen inputs for the first minimal continuous-market run.
+schema_version: 1
+
+kalshi_base_url: https://api.elections.kalshi.com/trade-api/v2
+market_count: 3
+# Order is significant. Selection takes one market from each sector in this
+# order, then repeats from the top until the cohort is full, so no single
+# high-volume sector can claim every slot. A market waits in its primary
+# series category only; every listed category must still be allowed.
+allowed_market_categories:
+  - Elections
+  - Politics
+  - Economics
+  - Entertainment  # Culture in Kalshi's UI
+  - Commodities
+  - Mentions
+  - Financials  # Finance in Kalshi's UI
+  - Science and Technology  # Tech & Sciences in Kalshi's UI
+volume_24h_floor: 1000
+# Initial latest YES trade price must be within [lo, hi], inclusive, in cents.
+# Applied only on startup discovery; later price changes never remove markets.
+# [0, 100] allows the full price range; missing/invalid prices are still excluded.
+uncertainty_price_range_cents: [10, 90]
+# Horizon uses the earlier available expected/latest expiration, in hours.
+# Trading must already be open.
+expected_expiration_min_hours: 48
+expected_expiration_max_hours: 720
+market_poll_interval_seconds: 300
+market_stale_after_seconds: 600
+
+participant_count: 5
+initial_cash_cents: 100000
+
+# Markets start with empty books. Agents supply all orders and liquidity.
+
+# The secret values named here remain in the environment and are never saved.
+model_provider: vllm
+model_name: Qwen/Qwen3.5-9B
+model_revision: c202236235762e1c871ad0ccb60c8ee5ba337b9a
+model_base_url_env: MODEL_BASE_URL
+model_api_key_env: MODEL_API_KEY
+max_concurrent_inference: 5
+request_timeout_seconds: 120
+# Tokens allowed on top of the fixed, server-cached prefix (system prompt plus
+# tool schemas, measured at startup). The brief and conversation
+# history share this budget; oldest groups are dropped to stay inside it.
+working_token_budget: 16384
+max_output_tokens: 1024
+# Sent explicitly on every request, so the frozen settings record them.
+# These follow Qwen3's published non-thinking recommendation; verify against
+# the model card for the pinned revision before trusting a run.
+temperature: 1.0
+top_p: 0.8
+top_k: 20
+# One run-level seed; each participant samples at sampling_seed + its index,
+# so a run is reproducible without eight agents drawing identical tokens.
+sampling_seed: 20260917
+server_context_tokens: 20480
+enable_thinking: false
+
+private_note_max_chars: 2000
+# Daily sessions, including weekends; elapsed costs keep running overnight.
+trading_timezone: America/New_York
+trading_day_start: "08:00"
+trading_day_end: "16:00"
+# Per dispatched call; order/read/news activity has no separate count quota.
+order_tool_minutes: 2  # submit_order and cancel_order
+read_tool_minutes: 5  # book, recent trades, own orders, account
+news_tool_minutes: 10
+hold_for_now_minutes: 60
+inference_retry_seconds: 60
+
+tavily_api_key_env: TAVILY_API_KEY
+
+# Total real runtime, including closed hours; within the Modal runner's limit.
+run_duration_seconds: 82800

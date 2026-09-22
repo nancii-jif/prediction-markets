@@ -1,0 +1,33 @@
+
+market:
+- filter for uncertain and active markets, look at trade volume within last 10min?
+- news stream
+
+filters:
+- uncertainty, 10-90
+- volume_last24, 500
+- horizon in hours 24, using expected_close_time
+
+
+short, mid, long horizon, top 10% volume markets, 
+stratified: horizon 24-72, 72-168, 168-720
+
+----
+
+how to make agents trade organically? 
+we need news
+
+
+
+trading day 8*60=480min, 8AM-4PM EST 
+tools have time cost 
+
+submit/cancel orders 2min
+get orderbook/trade history 5min
+research news 10min
+hold_for_now 60min
+hold_until_next_day (relinquish rest of the day)
+
+return tool result to model first, allow model inference, 
+next action happens after max(inference_time, wall_clock)
+if crossed into next day while hold_for_now, always finish holding

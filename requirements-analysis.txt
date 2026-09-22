@@ -1,0 +1,2 @@
+# Optional local plotting dependencies; not installed in the Modal runner.
+matplotlib>=3.7,<4

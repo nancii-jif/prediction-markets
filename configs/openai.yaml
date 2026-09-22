@@ -1,0 +1,83 @@
+# OpenAI-hosted baseline; local or Modal CPU orchestration, with the same exchange.
+schema_version: 1
+
+kalshi_base_url: https://api.elections.kalshi.com/trade-api/v2
+market_count: 10
+# Order is significant. Selection takes one market from each sector in this
+# order, then repeats from the top until the cohort is full, so no single
+# high-volume sector can claim every slot. A market waits in its primary
+# series category only; every listed category must still be allowed.
+allowed_market_categories:
+  - Elections
+  - Politics
+  - Economics
+  - Entertainment  # Culture in Kalshi's UI
+  - Commodities
+  - Mentions
+  - Financials  # Finance in Kalshi's UI
+  - Science and Technology  # Tech & Sciences in Kalshi's UI
+volume_24h_floor: 5000
+# Initial latest YES trade price must be within [lo, hi], inclusive, in cents.
+# Applied only on startup discovery; later price changes never remove markets.
+# [0, 100] allows the full price range; missing/invalid prices are still excluded.
+uncertainty_price_range_cents: [10, 90]
+# Horizon uses the earlier available expected/latest expiration, in hours.
+# Trading must already be open.
+expected_expiration_min_hours: 12
+expected_expiration_max_hours: 720
+market_poll_interval_seconds: 300
+market_stale_after_seconds: 600
+
+participant_count: 5
+initial_cash_cents: 100000
+
+# Markets start with empty books. Agents supply all orders and liquidity.
+
+# The secret values named here remain in the environment and are never saved.
+model_provider: openai
+model_name: gpt-5.6-luna
+# OpenAI pins versions in model_name; no Hugging Face revision or weights.
+model_revision: null
+# Responses supports Luna reasoning with the existing exchange function tools.
+# Chat Completions requires effort none for Luna function tools.
+openai_api: responses
+openai_reasoning_effort: high
+# Optional override; defaults to https://api.openai.com/v1.
+model_base_url_env: OPENAI_BASE_URL
+model_api_key_env: OPENAI_API_KEY
+max_concurrent_inference: 4
+request_timeout_seconds: 120
+# Tokens allowed on top of the fixed prefix (system prompt plus tool schemas),
+# estimated locally with tiktoken and framing headroom. The brief and conversation
+# history share this budget; oldest groups are dropped to stay inside it.
+working_token_budget: 16384
+# Includes hidden reasoning plus visible text and tool arguments.
+max_output_tokens: 2048
+# OpenAI sampling options; null omits an option. Reasoning models may require
+# temperature/top_p to be null. Check the selected model's API capabilities.
+temperature: null
+top_p: null
+# Retained for shared config compatibility; OpenAI does not receive top_k or seed.
+top_k: -1
+sampling_seed: 20260917
+# Local context guard, deliberately below the hosted model's context limit.
+server_context_tokens: 32768
+# vLLM-only; OpenAI reasoning is controlled by openai_reasoning_effort above.
+enable_thinking: false
+
+private_note_max_chars: 2000
+# Daily sessions, including weekends; elapsed costs keep running overnight.
+trading_timezone: America/New_York
+trading_day_start: "12:30"
+trading_day_end: "18:30"
+# Per dispatched call; order/read/news activity has no separate count quota.
+order_tool_minutes: 2  # submit_order and cancel_order
+read_tool_minutes: 5  # book, recent trades, own orders, account
+news_tool_minutes: 10
+hold_for_now_minutes: 30
+inference_retry_seconds: 30
+
+tavily_api_key_env: TAVILY_API_KEY
+
+# Total real runtime, including closed hours; within the Modal runner's limit.
+run_duration_seconds: 28800
